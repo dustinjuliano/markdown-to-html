@@ -1,4 +1,4 @@
-A simple static site generator for Markdown.
+A simple static website generator for Markdown.
 
 This is a work in progress.
 

@@ -4,3 +4,5 @@
 .agents/skills/coding-standards/
 .agents/skills/defensive-programming/
 .agents/skills/software-design/
+**/__pycache__/
+*.pyc

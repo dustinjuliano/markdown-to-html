@@ -1,3 +1,6 @@
 .DS_Store
 /tmp/
-
+# Already included in another repo:
+.agents/skills/coding-standards/
+.agents/skills/defensive-programming/
+.agents/skills/software-design/

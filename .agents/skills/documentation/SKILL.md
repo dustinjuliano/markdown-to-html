@@ -23,3 +23,4 @@ This skill defines the mandatory markdown formatting, punctuation, and structura
 - All headings must have exactly one blank line immediately following them.
 - Non-English terms, file names, paths, variables, classes, and options must be enclosed in backticks.
 - Write in a standard, clean, and professional style.
+- Codebase documentation (architecture, internal logic, API usage, and getting-started tutorials) must be kept strictly synchronized in the `/doc/` folder at all times.

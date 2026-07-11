@@ -1,0 +1,31 @@
+{
+  "source_vault": "./test/mock_vault",
+  "target_site": "./test/mock_output",
+  "templates": {
+    "source_dir": "./test/mock_templates",
+    "mapping": {
+      "Articles/": "articles_layout.html",
+      "default": "layout.html"
+    }
+  },
+  "routes": [
+    {
+      "source": "Articles/",
+      "target": "articles/"
+    },
+    {
+      "source": "Projects/Active/",
+      "target": "projects/"
+    },
+    {
+      "source": "/",
+      "target": "/"
+    }
+  ],
+  "image_mapping": {
+    "global_target": "assets/img",
+    "overrides": {
+      "Articles/": "articles/img"
+    }
+  }
+}

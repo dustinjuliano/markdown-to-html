@@ -99,6 +99,11 @@ def load_config(config_path: str) -> dict:
     if isinstance(item["target"], str) == False:
       raise ConfigError(f"Media target at index {idx} must be a string")
 
+  # Validate optional stylesheet section
+  if ("stylesheet" in config) == True:
+    if isinstance(config["stylesheet"], str) == False:
+      raise ConfigError("stylesheet must be a string")
+
   return config
 
 

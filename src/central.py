@@ -62,6 +62,22 @@ def build_site(config_path: str) -> None:
     return
   os.makedirs(tgt_site, exist_ok=True)
 
+  # Copy stylesheet if configured
+  if ("stylesheet" in config) == True:
+    style_src = join(src_vault, config["stylesheet"])
+    style_tgt = join(tgt_site, "base.css")
+    if exists(style_src) == True:
+      if is_safe_path(tgt_site, style_tgt) == True:
+        shutil.copy2(style_src, style_tgt)
+        print(f"Copied stylesheet: {config['stylesheet']} -> base.css")
+      else:
+        print(
+          "Security Warning: Skipping unsafe stylesheet write: "
+          f"{style_tgt}"
+        )
+    else:
+      print(f"Warning: Stylesheet file '{style_src}' not found")
+
   # Build md_mappings from export
   md_mappings = {}
   for item in config["export"]:

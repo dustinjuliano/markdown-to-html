@@ -5,6 +5,8 @@ strict XHTML templates, replace `<template>` placeholders with HTML,
 and serialize the result into HTML5 with clean indentation
 """
 
+import textwrap
+import re
 from xml.etree.ElementTree import (
   Element,
   fromstring,
@@ -19,7 +21,10 @@ class TemplateError(Exception):
 
 
 def render_template(
-  template_content: str, title: str, content_html: str
+  template_content: str,
+  title: str,
+  content_html: str,
+  context: dict,
 ) -> str:
   """Renders page content into an XHTML template using ElementTree.
 
@@ -27,6 +32,7 @@ def render_template(
       template_content (`str`): The XHTML template content
       title (`str`): The page title to inject
       content_html (`str`): The XHTML parsed body content to inject
+      context (`dict`): The execution context dictionary for scripting
 
   Returns:
       `str`: Clean, indented HTML5 output string
@@ -34,8 +40,50 @@ def render_template(
   Raises:
       `TemplateError`: If the template is malformed XML
   """
+  def py_block_repl(match):
+    code_text = match.group(1)
+    # Strip optional CDATA wrappers defensively
+    cdata_match = re.match(
+      r"^\s*<!\[CDATA\[(.*?)\]\]>\s*$",
+      code_text,
+      flags=re.DOTALL,
+    )
+    if cdata_match is not None:
+      code_text = cdata_match.group(1)
+
+    clean_code = textwrap.dedent(code_text).strip()
+    output_buffer = []
+
+    def echo(text: str) -> None:
+      output_buffer.append(text)
+
+    exec_context = dict(context)
+    exec_context["echo"] = echo
+
+    try:
+      exec(clean_code, exec_context)
+    except Exception as e:
+      raise TemplateError(
+        f"Error executing Python block in template: {str(e)}"
+      )
+    return "".join(output_buffer)
+
   try:
-    root = fromstring(template_content)
+    processed_template = re.sub(
+      r"<py>(.*?)</py>",
+      py_block_repl,
+      template_content,
+      flags=re.DOTALL,
+    )
+  except TemplateError:
+    raise
+  except Exception as e:
+    raise TemplateError(
+      f"Failed to preprocess template scripts: {str(e)}"
+    )
+
+  try:
+    root = fromstring(processed_template)
   except Exception as e:
     raise TemplateError(f"Malformed template XML: {str(e)}")
 

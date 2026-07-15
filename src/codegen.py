@@ -14,6 +14,7 @@ def generate_html(
   title: str,
   link_resolver,
   image_resolver,
+  context: dict,
 ) -> str:
   """Generates final HTML by parsing markdown and inserting into template.
 
@@ -23,6 +24,7 @@ def generate_html(
       title (`str`): The title of the page
       link_resolver (`callable`): The link resolution helper
       image_resolver (`callable`): The image resolution helper
+      context (`dict`): The execution context dictionary for scripting
 
   Returns:
       `str`: The generated HTML5 string
@@ -30,4 +32,4 @@ def generate_html(
   content_html = parse_markdown(
     markdown_text, link_resolver, image_resolver
   )
-  return render_template(template_content, title, content_html)
+  return render_template(template_content, title, content_html, context)

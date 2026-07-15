@@ -91,7 +91,13 @@ def build_site(config_path: str) -> None:
     rel_src = item["source"]
     rel_tgt = item["target"]
     full_src = join(src_vault, rel_src)
-    full_tgt = join(tgt_site, rel_tgt)
+
+    file_tgt = rel_tgt
+    if file_tgt == "/":
+      file_tgt = "index.html"
+    elif file_tgt.endswith("/") == True:
+      file_tgt = file_tgt + "index.html"
+    full_tgt = join(tgt_site, file_tgt)
 
     if is_safe_path(tgt_site, full_tgt) == False:
       print(f"Security Warning: Skipping unsafe write: {rel_tgt}")
@@ -135,7 +141,12 @@ def build_site(config_path: str) -> None:
           template_content = loaded_templates[prefix]
           break
 
-    current_tgt_dir = dirname(rel_tgt)
+    if rel_tgt == "/":
+      current_tgt_dir = ""
+    elif rel_tgt.endswith("/") == True:
+      current_tgt_dir = rel_tgt.rstrip("/")
+    else:
+      current_tgt_dir = dirname(rel_tgt)
 
     def resolve_link(target: str) -> str:
       if target.endswith(".md") == False:
@@ -151,8 +162,16 @@ def build_site(config_path: str) -> None:
             found_rel_tgt = val
             break
       if found_rel_tgt is not None:
-        rel_file = relpath(found_rel_tgt, current_tgt_dir)
-        return rel_file.replace("\\", "/")
+        logical_found = found_rel_tgt
+        if logical_found == "/":
+          logical_found = ""
+        rel_file = relpath(logical_found, current_tgt_dir)
+        resolved = rel_file.replace("\\", "/")
+        if (found_rel_tgt.endswith("/") == True) and (
+          resolved.endswith("/") == False
+        ):
+          resolved = resolved + "/"
+        return resolved
       print(f"Warning: Link target '{target}' not found")
       return "#"
 
@@ -201,6 +220,20 @@ def build_site(config_path: str) -> None:
       rel_file = relpath(candidate_tgt, current_tgt_dir)
       return rel_file.replace("\\", "/")
 
+    relative_root = relpath(tgt_site, dirname(full_tgt)).replace("\\", "/")
+    if relative_root == ".":
+      relative_root = ""
+    else:
+      relative_root = relative_root + "/"
+
+    context = {
+      "relative_root": relative_root,
+      "title": title,
+      "config": config,
+      "relative_source_path": rel_src,
+      "relative_target_path": rel_tgt,
+    }
+
     try:
       html_output = generate_html(
         md_content,
@@ -208,12 +241,16 @@ def build_site(config_path: str) -> None:
         title,
         resolve_link,
         resolve_image,
+        context,
       )
     except BuildError:
       raise
     except Exception as e:
       print(f"Error compiling {rel_src}: {str(e)}")
       continue
+
+    if html_output.endswith("\n") == False:
+      html_output = html_output + "\n"
 
     os.makedirs(dirname(full_tgt), exist_ok=True)
     with open(full_tgt, "w", encoding="utf-8") as out_f:

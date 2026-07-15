@@ -41,8 +41,8 @@ def load_config(config_path: str) -> dict:
     "source_vault",
     "target_site",
     "templates",
-    "routes",
-    "image_mapping",
+    "export",
+    "media",
   ]
   for key in required_keys:
     if (key in config) == False:
@@ -67,29 +67,37 @@ def load_config(config_path: str) -> dict:
   if isinstance(templates["mapping"], dict) == False:
     raise ConfigError("templates mapping must be a dictionary")
 
-  # Validate routes section
-  if isinstance(config["routes"], list) == False:
-    raise ConfigError("routes must be a list")
-  for idx, route in enumerate(config["routes"]):
-    if isinstance(route, dict) == False:
-      raise ConfigError(f"Route at index {idx} must be a dictionary")
-    if ("source" in route) == False or ("target" in route) == False:
+  # Validate export section
+  export = config["export"]
+  if isinstance(export, list) == False:
+    raise ConfigError("export must be a list")
+  for idx, item in enumerate(export):
+    if isinstance(item, dict) == False:
+      raise ConfigError(f"Export at index {idx} must be a dictionary")
+    if ("source" in item) == False or ("target" in item) == False:
       raise ConfigError(
-        f"Route at index {idx} must contain source and target"
+        f"Export at index {idx} must contain source and target"
       )
+    if isinstance(item["source"], str) == False:
+      raise ConfigError(f"Export source at index {idx} must be a string")
+    if isinstance(item["target"], str) == False:
+      raise ConfigError(f"Export target at index {idx} must be a string")
 
-  # Validate image_mapping section
-  img_map = config["image_mapping"]
-  if isinstance(img_map, dict) == False:
-    raise ConfigError("image_mapping must be a dictionary")
-  if ("global_target" in img_map) == False:
-    raise ConfigError("image_mapping must contain global_target")
-  if isinstance(img_map["global_target"], str) == False:
-    raise ConfigError("global_target must be a string")
-  if ("overrides" in img_map) == True and isinstance(
-    img_map["overrides"], dict
-  ) == False:
-    raise ConfigError("image overrides must be a dictionary")
+  # Validate media section
+  media = config["media"]
+  if isinstance(media, list) == False:
+    raise ConfigError("media must be a list")
+  for idx, item in enumerate(media):
+    if isinstance(item, dict) == False:
+      raise ConfigError(f"Media at index {idx} must be a dictionary")
+    if ("source" in item) == False or ("target" in item) == False:
+      raise ConfigError(
+        f"Media at index {idx} must contain source and target"
+      )
+    if isinstance(item["source"], str) == False:
+      raise ConfigError(f"Media source at index {idx} must be a string")
+    if isinstance(item["target"], str) == False:
+      raise ConfigError(f"Media target at index {idx} must be a string")
 
   return config
 

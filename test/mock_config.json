@@ -8,24 +8,44 @@
       "default": "layout.html"
     }
   },
-  "routes": [
+  "export": [
     {
-      "source": "Articles/",
-      "target": "articles/"
+      "source": "Home Page.md",
+      "target": "index.html"
     },
     {
-      "source": "Projects/Active/",
-      "target": "projects/"
+      "source": "Articles/Learning HTML.md",
+      "target": "articles/learning-html/index.html"
     },
     {
-      "source": "/",
-      "target": "/"
+      "source": "Articles/Introduction to CSS.md",
+      "target": "articles/introduction-to-css/index.html"
+    },
+    {
+      "source": "Articles/No Heading Note.md",
+      "target": "articles/no-heading-note/index.html"
+    },
+    {
+      "source": "Projects/Active/Project One.md",
+      "target": "projects/project-one/index.html"
+    },
+    {
+      "source": "Projects/Active/Project Two.md",
+      "target": "projects/project-two/index.html"
     }
   ],
-  "image_mapping": {
-    "global_target": "assets/img",
-    "overrides": {
-      "Articles/": "articles/img"
+  "media": [
+    {
+      "source": "Articles/",
+      "target": "articles/img/"
+    },
+    {
+      "source": "attachments/",
+      "target": "assets/img/"
+    },
+    {
+      "source": "attachments/deep/nested/",
+      "target": "assets/img/"
     }
-  }
+  ]
 }

@@ -61,12 +61,12 @@ class TestConfig(unittest.TestCase):
           "default": "layout.html"
         }
       },
-      "routes": [
-        {"source": "/", "target": "/"}
+      "export": [
+        {"source": "Home.md", "target": "index.html"}
       ],
-      "image_mapping": {
-        "global_target": "img"
-      }
+      "media": [
+        {"source": "attachments/", "target": "assets/img/"}
+      ]
     }
     self.write_temp_config(valid_data)
     cfg = load_config(self.temp_config_path)
@@ -74,7 +74,7 @@ class TestConfig(unittest.TestCase):
 
   def test_load_config_missing_required_keys(self) -> None:
     """Verifies ConfigError is raised when required keys are missing"""
-    keys = ["source_vault", "target_site", "templates", "routes", "image_mapping"]
+    keys = ["source_vault", "target_site", "templates", "export", "media"]
     for missing_key in keys:
       valid_data = {
         "source_vault": "./vault",
@@ -85,12 +85,12 @@ class TestConfig(unittest.TestCase):
             "default": "layout.html"
           }
         },
-        "routes": [
-          {"source": "/", "target": "/"}
+        "export": [
+          {"source": "Home.md", "target": "index.html"}
         ],
-        "image_mapping": {
-          "global_target": "img"
-        }
+        "media": [
+          {"source": "attachments/", "target": "assets/img/"}
+        ]
       }
       del valid_data[missing_key]
       self.write_temp_config(valid_data)
@@ -103,8 +103,8 @@ class TestConfig(unittest.TestCase):
       "source_vault": 123,
       "target_site": "./public",
       "templates": {"source_dir": "./templates", "mapping": {"default": "layout.html"}},
-      "routes": [],
-      "image_mapping": {"global_target": "img"}
+      "export": [],
+      "media": []
     }
     self.write_temp_config(bad_data_1)
     with self.assertRaises(ConfigError):
@@ -114,8 +114,8 @@ class TestConfig(unittest.TestCase):
       "source_vault": "./vault",
       "target_site": True,
       "templates": {"source_dir": "./templates", "mapping": {"default": "layout.html"}},
-      "routes": [],
-      "image_mapping": {"global_target": "img"}
+      "export": [],
+      "media": []
     }
     self.write_temp_config(bad_data_2)
     with self.assertRaises(ConfigError):
@@ -128,8 +128,8 @@ class TestConfig(unittest.TestCase):
       "source_vault": "./vault",
       "target_site": "./public",
       "templates": "layout.html",
-      "routes": [],
-      "image_mapping": {"global_target": "img"}
+      "export": [],
+      "media": []
     }
     self.write_temp_config(bad_data_1)
     with self.assertRaises(ConfigError):
@@ -140,8 +140,8 @@ class TestConfig(unittest.TestCase):
       "source_vault": "./vault",
       "target_site": "./public",
       "templates": {"source_dir": "./templates"},
-      "routes": [],
-      "image_mapping": {"global_target": "img"}
+      "export": [],
+      "media": []
     }
     self.write_temp_config(bad_data_2)
     with self.assertRaises(ConfigError):
@@ -152,8 +152,8 @@ class TestConfig(unittest.TestCase):
       "source_vault": "./vault",
       "target_site": "./public",
       "templates": {"source_dir": 123, "mapping": {"default": "layout.html"}},
-      "routes": [],
-      "image_mapping": {"global_target": "img"}
+      "export": [],
+      "media": []
     }
     self.write_temp_config(bad_data_3)
     with self.assertRaises(ConfigError):
@@ -164,98 +164,134 @@ class TestConfig(unittest.TestCase):
       "source_vault": "./vault",
       "target_site": "./public",
       "templates": {"source_dir": "./templates", "mapping": []},
-      "routes": [],
-      "image_mapping": {"global_target": "img"}
+      "export": [],
+      "media": []
     }
     self.write_temp_config(bad_data_4)
     with self.assertRaises(ConfigError):
       load_config(self.temp_config_path)
 
-  def test_load_config_invalid_routes(self) -> None:
-    """Verifies validations for routing configurations"""
-    # routes must be list
+  def test_load_config_invalid_export(self) -> None:
+    """Verifies validations for export configurations"""
+    # export must be list
     bad_data_1 = {
       "source_vault": "./vault",
       "target_site": "./public",
       "templates": {"source_dir": "./templates", "mapping": {"default": "layout.html"}},
-      "routes": {},
-      "image_mapping": {"global_target": "img"}
+      "export": {},
+      "media": []
     }
     self.write_temp_config(bad_data_1)
     with self.assertRaises(ConfigError):
       load_config(self.temp_config_path)
 
-    # route elements must be dicts
+    # export elements must be dicts
     bad_data_2 = {
       "source_vault": "./vault",
       "target_site": "./public",
       "templates": {"source_dir": "./templates", "mapping": {"default": "layout.html"}},
-      "routes": ["/ -> /"],
-      "image_mapping": {"global_target": "img"}
+      "export": ["Home.md -> index.html"],
+      "media": []
     }
     self.write_temp_config(bad_data_2)
     with self.assertRaises(ConfigError):
       load_config(self.temp_config_path)
 
-    # route dict must have source and target
+    # export dict must have source and target
     bad_data_3 = {
       "source_vault": "./vault",
       "target_site": "./public",
       "templates": {"source_dir": "./templates", "mapping": {"default": "layout.html"}},
-      "routes": [{"source": "/"}],
-      "image_mapping": {"global_target": "img"}
+      "export": [{"source": "Home.md"}],
+      "media": []
     }
     self.write_temp_config(bad_data_3)
     with self.assertRaises(ConfigError):
       load_config(self.temp_config_path)
 
-  def test_load_config_invalid_image_mapping(self) -> None:
-    """Verifies validation of image target directories and overrides"""
-    # image_mapping must be dict
-    bad_data_1 = {
-      "source_vault": "./vault",
-      "target_site": "./public",
-      "templates": {"source_dir": "./templates", "mapping": {"default": "layout.html"}},
-      "routes": [],
-      "image_mapping": "img"
-    }
-    self.write_temp_config(bad_data_1)
-    with self.assertRaises(ConfigError):
-      load_config(self.temp_config_path)
-
-    # image_mapping must have global_target
-    bad_data_2 = {
-      "source_vault": "./vault",
-      "target_site": "./public",
-      "templates": {"source_dir": "./templates", "mapping": {"default": "layout.html"}},
-      "routes": [],
-      "image_mapping": {"overrides": {}}
-    }
-    self.write_temp_config(bad_data_2)
-    with self.assertRaises(ConfigError):
-      load_config(self.temp_config_path)
-
-    # global_target must be string
-    bad_data_3 = {
-      "source_vault": "./vault",
-      "target_site": "./public",
-      "templates": {"source_dir": "./templates", "mapping": {"default": "layout.html"}},
-      "routes": [],
-      "image_mapping": {"global_target": 123}
-    }
-    self.write_temp_config(bad_data_3)
-    with self.assertRaises(ConfigError):
-      load_config(self.temp_config_path)
-
-    # overrides must be dict
+    # export source must be string
     bad_data_4 = {
       "source_vault": "./vault",
       "target_site": "./public",
       "templates": {"source_dir": "./templates", "mapping": {"default": "layout.html"}},
-      "routes": [],
-      "image_mapping": {"global_target": "img", "overrides": []}
+      "export": [{"source": 123, "target": "index.html"}],
+      "media": []
     }
     self.write_temp_config(bad_data_4)
+    with self.assertRaises(ConfigError):
+      load_config(self.temp_config_path)
+
+    # export target must be string
+    bad_data_5 = {
+      "source_vault": "./vault",
+      "target_site": "./public",
+      "templates": {"source_dir": "./templates", "mapping": {"default": "layout.html"}},
+      "export": [{"source": "Home.md", "target": True}],
+      "media": []
+    }
+    self.write_temp_config(bad_data_5)
+    with self.assertRaises(ConfigError):
+      load_config(self.temp_config_path)
+
+  def test_load_config_invalid_media(self) -> None:
+    """Verifies validation of media directory configurations"""
+    # media must be list
+    bad_data_1 = {
+      "source_vault": "./vault",
+      "target_site": "./public",
+      "templates": {"source_dir": "./templates", "mapping": {"default": "layout.html"}},
+      "export": [],
+      "media": {}
+    }
+    self.write_temp_config(bad_data_1)
+    with self.assertRaises(ConfigError):
+      load_config(self.temp_config_path)
+
+    # media elements must be dicts
+    bad_data_2 = {
+      "source_vault": "./vault",
+      "target_site": "./public",
+      "templates": {"source_dir": "./templates", "mapping": {"default": "layout.html"}},
+      "export": [],
+      "media": ["attachments/ -> assets/img/"]
+    }
+    self.write_temp_config(bad_data_2)
+    with self.assertRaises(ConfigError):
+      load_config(self.temp_config_path)
+
+    # media element must contain source and target
+    bad_data_3 = {
+      "source_vault": "./vault",
+      "target_site": "./public",
+      "templates": {"source_dir": "./templates", "mapping": {"default": "layout.html"}},
+      "export": [],
+      "media": [{"source": "attachments/"}]
+    }
+    self.write_temp_config(bad_data_3)
+    with self.assertRaises(ConfigError):
+      load_config(self.temp_config_path)
+
+    # media source must be string
+    bad_data_4 = {
+      "source_vault": "./vault",
+      "target_site": "./public",
+      "templates": {"source_dir": "./templates", "mapping": {"default": "layout.html"}},
+      "export": [],
+      "media": [{"source": 123, "target": "assets/img/"}]
+    }
+    self.write_temp_config(bad_data_4)
+    with self.assertRaises(ConfigError):
+      load_config(self.temp_config_path)
+
+    # media target must be string
+    bad_data_5 = {
+      "source_vault": "./vault",
+      "target_site": "./public",
+      "templates": {"source_dir": "./templates", "mapping": {"default": "layout.html"}},
+      "export": [],
+      "media": [{"source": "attachments/", "target": False}]
+    }
+    self.write_temp_config(bad_data_5)
     with self.assertRaises(ConfigError):
       load_config(self.temp_config_path)
 

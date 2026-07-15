@@ -144,9 +144,31 @@ class TestCentral(unittest.TestCase):
       "./test/mock_vault/Articles/header_image.png",
       dup_file
     )
+    # We need to map media so that both files are scanned as potential conflicts
+    temp_cfg = "./test/temp_dup_config.json"
+    cfg_data = {
+      "source_vault": "./test/mock_vault",
+      "target_site": self.output_dir,
+      "templates": {
+        "source_dir": "./test/mock_templates",
+        "mapping": {
+          "default": "layout.html"
+        }
+      },
+      "export": [
+        {"source": "Home Page.md", "target": "index.html"}
+      ],
+      "media": [
+        {"source": "Articles/", "target": "assets/img/"},
+        {"source": "", "target": "assets/img/"}
+      ]
+    }
+    with open(temp_cfg, "w", encoding="utf-8") as f:
+      json.dump(cfg_data, f)
+    self.addCleanup(lambda: os.remove(temp_cfg) if exists(temp_cfg) else None)
     try:
       with self.assertRaises(BuildError):
-        build_site("./test/mock_config.json")
+        build_site(temp_cfg)
     finally:
       if exists(dup_file) == True:
         os.remove(dup_file)
@@ -163,10 +185,8 @@ class TestCentral(unittest.TestCase):
           "default": "layout.html"
         }
       },
-      "routes": [],
-      "image_mapping": {
-        "global_target": "assets/img"
-      }
+      "export": [],
+      "media": []
     }
     with open(temp_cfg, "w", encoding="utf-8") as f:
       json.dump(cfg_data, f)
@@ -185,10 +205,8 @@ class TestCentral(unittest.TestCase):
           "Articles/": "articles_layout.html"
         }
       },
-      "routes": [],
-      "image_mapping": {
-        "global_target": "assets/img"
-      }
+      "export": [],
+      "media": []
     }
     with open(temp_cfg, "w", encoding="utf-8") as f:
       json.dump(cfg_data, f)
@@ -207,10 +225,8 @@ class TestCentral(unittest.TestCase):
           "default": "nonexistent_layout_file.html"
         }
       },
-      "routes": [],
-      "image_mapping": {
-        "global_target": "assets/img"
-      }
+      "export": [],
+      "media": []
     }
     with open(temp_cfg, "w", encoding="utf-8") as f:
       json.dump(cfg_data, f)
@@ -229,16 +245,12 @@ class TestCentral(unittest.TestCase):
           "default": "layout.html"
         }
       },
-      "routes": [
-        {"source": "Articles/", "target": "../unsafe_dir/"},
-        {"source": "/", "target": "/"}
+      "export": [
+        {"source": "Home Page.md", "target": "../unsafe_dir/index.html"}
       ],
-      "image_mapping": {
-        "global_target": "assets/img",
-        "overrides": {
-          "Articles/": "../unsafe_img/"
-        }
-      }
+      "media": [
+        {"source": "Articles/", "target": "../unsafe_img/"}
+      ]
     }
     with open(temp_cfg, "w", encoding="utf-8") as f:
       json.dump(cfg_data, f)
@@ -249,26 +261,22 @@ class TestCentral(unittest.TestCase):
     self.assertEqual(exists(unsafe_out), False)
     self.assertEqual(exists(unsafe_img), False)
 
-  def _build_with_mock_config(self, extra_routes=None) -> str:
-    """Builds the mock vault into self.output_dir using a temp config.
+  def _build_with_mock_config(self, extra_export=None) -> str:
+    """Builds the mock vault into self.output_dir using a temp config
 
     Writes a temporary `site.json` that mirrors `mock_config.json` but
     targets `self.output_dir`, runs the build, registers cleanup, and
-    returns the path to the temp config file.
-
-    Args:
-        `extra_routes` (`list` or `None`): Optional override for the
-            routes list. Uses the standard mock routes when `None`
-
-    Returns:
-        `str`: Path to the written temp config file
+    returns the path to the temp config file
     """
-    routes = extra_routes
-    if routes is None:
-      routes = [
-        {"source": "Articles/", "target": "articles/"},
-        {"source": "Projects/Active/", "target": "projects/"},
-        {"source": "/", "target": "/"},
+    export = extra_export
+    if export is None:
+      export = [
+        {"source": "Home Page.md", "target": "index.html"},
+        {"source": "Articles/Learning HTML.md", "target": "articles/learning-html/index.html"},
+        {"source": "Articles/Introduction to CSS.md", "target": "articles/introduction-to-css/index.html"},
+        {"source": "Articles/No Heading Note.md", "target": "articles/no-heading-note/index.html"},
+        {"source": "Projects/Active/Project One.md", "target": "projects/project-one/index.html"},
+        {"source": "Projects/Active/Project Two.md", "target": "projects/project-two/index.html"}
       ]
     temp_cfg = "./test/temp_mock_cfg_helper.json"
     cfg_data = {
@@ -278,16 +286,15 @@ class TestCentral(unittest.TestCase):
         "source_dir": "./test/mock_templates",
         "mapping": {
           "Articles/": "articles_layout.html",
-          "default": "layout.html",
-        },
+          "default": "layout.html"
+        }
       },
-      "routes": routes,
-      "image_mapping": {
-        "global_target": "assets/img",
-        "overrides": {
-          "Articles/": "articles/img",
-        },
-      },
+      "export": export,
+      "media": [
+        {"source": "Articles/", "target": "articles/img/"},
+        {"source": "attachments/", "target": "assets/img/"},
+        {"source": "attachments/deep/nested/", "target": "assets/img/"}
+      ]
     }
     with open(temp_cfg, "w", encoding="utf-8") as f:
       json.dump(cfg_data, f)
@@ -298,11 +305,11 @@ class TestCentral(unittest.TestCase):
     return temp_cfg
 
   def test_title_extracted_from_first_heading(self) -> None:
-    """Verifies that the page title and H1 are derived from the note's first heading.
+    """Verifies that the page title and H1 are derived from the note's first heading
 
     Ensures the compiler strips the first `#` heading from the body and
     injects it as both the `<title>` and the `<h1>` via the template hook,
-    with no duplicate H1 appearing in the `<main>` content block.
+    with no duplicate H1 appearing in the `<main>` content block
     """
     self._build_with_mock_config()
     html_file = join(self.output_dir, "articles/learning-html/index.html")
@@ -318,11 +325,11 @@ class TestCentral(unittest.TestCase):
     self.assertEqual(h1_count, 1)
 
   def test_title_fallback_to_filename(self) -> None:
-    """Verifies that a note with no heading falls back to filename as title.
+    """Verifies that a note with no heading falls back to filename as title
 
     The `No Heading Note.md` vault file contains no `#` heading. The
     compiler must use the basename of the source file (without extension)
-    as the page title and inject it into the template `<h1>`.
+    as the page title and inject it into the template `<h1>`
     """
     self._build_with_mock_config()
     fallback_file = join(
@@ -335,10 +342,10 @@ class TestCentral(unittest.TestCase):
     self.assertIn("<h1>No Heading Note</h1>", content)
 
   def test_dual_title_hook_in_template(self) -> None:
-    """Verifies that the title hook is injected in all positions it appears.
+    """Verifies that the title hook is injected in all positions it appears
 
     The mock layout templates place `<template id="title">` inside both
-    `<title>` and `<h1>`. Both must be replaced with the same title string.
+    `<title>` and `<h1>`. Both must be replaced with the same title string
     """
     self._build_with_mock_config()
     home_file = join(self.output_dir, "index.html")
@@ -349,13 +356,13 @@ class TestCentral(unittest.TestCase):
     self.assertIn("<h1>Home Page</h1>", content)
 
   def test_deeply_nested_image_resolved(self) -> None:
-    """Verifies that images in deeply nested vault folders are resolved correctly.
+    """Verifies that images in deeply nested vault folders are resolved correctly
 
     The `deep-image.png` asset lives in
     `attachments/deep/nested/deep-image.png`, far from the note in
-    `Articles/` that references it. The compiler must scan recursively,
+    `Articles/` that references it. The compiler must scan media mapping folders,
     find the file, copy it to `assets/img/`, and write the correct
-    relative `src` path in the compiled HTML.
+    relative `src` path in the compiled HTML
     """
     self._build_with_mock_config()
     html_file = join(self.output_dir, "articles/learning-html/index.html")
@@ -370,46 +377,35 @@ class TestCentral(unittest.TestCase):
       "<img src=\"../../assets/img/deep-image.png\"", content
     )
 
-  def test_route_remap_changes_output_path(self) -> None:
-    """Verifies that route mappings correctly remap vault paths to URL paths.
-
-    Routes do not gate which notes compile — all notes always compile.
-    A route remaps the vault folder prefix to a different URL path prefix
-    in the output. Without a matching route, a note still compiles to its
-    natural slugified vault path.
-
-    This test configures `Projects/Active/` to map to `projects/` and
-    verifies the output lands at the remapped path, not the raw vault path.
-    """
+  def test_unexported_notes_are_not_compiled(self) -> None:
+    """Verifies that only notes listed in the export configuration are compiled"""
+    # Compile only a subset of notes (excluding Projects)
     self._build_with_mock_config(
-      extra_routes=[
-        {"source": "Projects/Active/", "target": "projects/"},
-        {"source": "/", "target": "/"},
+      extra_export=[
+        {"source": "Home Page.md", "target": "index.html"},
+        {"source": "Articles/Learning HTML.md", "target": "articles/learning-html/index.html"}
       ]
     )
-    # Project notes must be compiled to the remapped route path
-    self.assertEqual(
-      exists(join(
-        self.output_dir, "projects/project-one/index.html"
-      )),
-      True,
-    )
-    # The raw unreworked vault path must not exist
-    self.assertEqual(
-      exists(join(
-        self.output_dir, "projects/active/project-one/index.html"
-      )),
-      False,
-    )
+    # Exports must exist
+    self.assertEqual(exists(join(self.output_dir, "index.html")), True)
+    self.assertEqual(exists(join(self.output_dir, "articles/learning-html/index.html")), True)
+    # Unexported project notes must not exist
+    self.assertEqual(exists(join(self.output_dir, "projects/project-one/index.html")), False)
+    self.assertEqual(exists(join(self.output_dir, "projects/project-two/index.html")), False)
 
   def test_my_first_article_content_correct(self) -> None:
-    """Verifies that My First Article compiles with all expected body content.
+    """Verifies that My First Article compiles with all expected body content
 
     Exercises nested lists, ordered lists, fenced code blocks, bold, and
     italic in the integration pipeline to catch regressions in the compile
-    loop that unit parser tests would not surface.
+    loop that unit parser tests would not surface
     """
-    self._build_with_mock_config()
+    # Let's add My First Article to the export
+    self._build_with_mock_config(
+      extra_export=[
+        {"source": "Articles/My First Article.md", "target": "articles/my-first-article/index.html"}
+      ]
+    )
     article_file = join(
       self.output_dir, "articles/my-first-article/index.html"
     )
